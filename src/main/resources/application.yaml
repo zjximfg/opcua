@@ -1,0 +1,41 @@
+server:
+  port: 8805
+  servlet:
+    application-display-name: Siemag Tecberg OpcUa Client
+    context-path: /opcua/api
+
+spring:
+  application:
+    name: Siemag Tecberg OpcUa Client
+  datasource:
+    username: root
+    password: 123456zjx
+    url: jdbc:mysql://127.0.0.1:3306/tst_opc_ua?useUnicode=true&characterEncoding=UTF-8
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+
+
+
+opc:
+  ua:
+    endpoint:
+      base_URL: opc.tcp://
+      computerName: localhost
+      username: ZHG
+      password: Start1
+    client:
+      applicationName: Siemag Tecberg OpcUa Client
+      applicationUri: urn:siemag:tecberg:opcua:client
+      certificatePath: tst-opc-project-client.pfx
+      keyPairPath: static/asset/example-client.pfx
+    keyStore:
+      commonName: Siemag Tecberg OpcUa Client
+      organization: SIEMAG TECBERG
+      organizationalUnit: PMA
+      localityName: Tianjin
+      stateName: Tianjin
+      countryCode: CN
+      dnsName: localhost
+      ipAddress: 127.0.0.1
+      clientAlias: client-alias
+      password: 123456
