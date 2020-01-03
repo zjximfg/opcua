@@ -7,6 +7,7 @@ import java.util.List;
 
 @Service
 public interface OpcUaNamespaceService {
+
     OpcUaNamespace getOpcUaNamespaceByProtocolIdAndIndex(Long opcUaProtocolId, Integer namespaceIndex);
 
     List<OpcUaNamespace> getOpcUaNamespaceListByProtocolId(Long protocolId);

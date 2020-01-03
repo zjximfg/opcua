@@ -1,8 +1,9 @@
 package com.tst.automation.opcua.project.service.impl;
 
 import com.tst.automation.opcua.core.service.OpcUaNamespaceService;
+import com.tst.automation.opcua.core.service.OpcUaTask;
 import com.tst.automation.opcua.project.mapper.OpcUaItemMapper;
-import com.tst.automation.opcua.project.pojo.OpcUaItem;
+import com.tst.automation.opcua.project.pojo.*;
 import com.tst.automation.opcua.project.service.*;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
     private ItemCategoryService itemCategoryService;
     @Autowired
     private OpcUaItemMapper opcUaItemMapper;
+    @Autowired
+    private OpcUaItemStateService opcUaItemStateService;
+
 
     @Override
     public String createFullName(OpcUaItem opcUaItem) {
@@ -33,6 +37,54 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
         opcUaItem.setOpcUaConnection(opcUaConnectionService.getOpcUaConnectionById(opcUaItem.getOpcUaConnectionId()));
         // 2. 获取opcUaConnection.opcUaNamespace
         opcUaItem.getOpcUaConnection().setOpcUaNamespace(opcUaNamespaceService.getOpcUaNamespaceById(opcUaItem.getOpcUaConnection().getOpcUaNamespaceId()));
+
+        // 判断是否为空？
+        if (!ObjectUtils.allNotNull(opcUaItem.getOpcUaConnection(), opcUaItem.getOpcUaConnection().getOpcUaNamespace())) return "";
+        //
+        // 组合字符串
+        StringBuilder stringBuilder = new StringBuilder();
+        // <opcUaConnection.opcUaNamespace.namespaceUri>
+        stringBuilder.append(opcUaItem.getOpcUaConnection().getOpcUaNamespace().getNamespaceUri());
+
+        stringBuilder.append(this.createIdentifier(opcUaItem));
+
+        return stringBuilder.toString();
+    }
+
+    @Override
+    public List<OpcUaItem> getOpcUaItemListByGroupId(Long opcUaGroupId) {
+        OpcUaItem opcUaItem = new OpcUaItem();
+        opcUaItem.setIsDeleted(false);
+        opcUaItem.setOpcUaGroupId(opcUaGroupId);
+        return opcUaItemMapper.select(opcUaItem);
+    }
+
+    @Override
+    public void updateOpcUaItem(OpcUaItem opcUaItem) {
+        String identifier = this.createIdentifier(opcUaItem);
+        String fullName = this.createFullName(opcUaItem);
+        System.out.println(fullName);
+        opcUaItem.setIdentifier(identifier);
+        opcUaItem.setFullName(fullName);
+        opcUaItemMapper.updateByPrimaryKeySelective(opcUaItem);
+    }
+
+    @Override
+    public void createOpcUaItem(OpcUaItem opcUaItem) {
+        String identifier = this.createIdentifier(opcUaItem);
+        String fullName = this.createFullName(opcUaItem);
+        System.out.println(fullName);
+        opcUaItem.setIdentifier(identifier);
+        opcUaItem.setFullName(fullName);
+        opcUaItem.setIsDeleted(false);
+        opcUaItemMapper.insertSelective(opcUaItem);
+        // 创建记录数据持久化的表
+        opcUaItemStateService.createNewTable(opcUaItem.getId());
+    }
+
+    @Override
+    public String createIdentifier(OpcUaItem opcUaItem) {
+        opcUaItem.setOpcUaConnection(opcUaConnectionService.getOpcUaConnectionById(opcUaItem.getOpcUaConnectionId()));
         // 3. 获取itemObject
         opcUaItem.setItemObject(itemObjectService.getItemObjectById(opcUaItem.getItemObjectId()));
         // 4. 获取itemType
@@ -40,13 +92,10 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
         // 5. 获取itemCategory
         opcUaItem.setItemCategory(itemCategoryService.getItemCategoryById(opcUaItem.getItemCategoryId()));
 
-        // 判断是否为空？
-        if (!ObjectUtils.allNotNull(opcUaItem.getOpcUaConnection(), opcUaItem.getOpcUaConnection().getOpcUaNamespace(), opcUaItem.getItemObject(), opcUaItem.getItemType(), opcUaItem.getItemCategory())) return "";
-        //
+        if (!ObjectUtils.allNotNull(opcUaItem.getItemObject(), opcUaItem.getItemType(), opcUaItem.getItemCategory())) return "";
+
         // 组合字符串
         StringBuilder stringBuilder = new StringBuilder();
-        // <opcUaConnection.opcUaNamespace.namespaceUri>
-        stringBuilder.append(opcUaItem.getOpcUaConnection().getOpcUaNamespace().getNamespaceUri());
         // <opcUaConnection.name>
         stringBuilder.append(opcUaItem.getOpcUaConnection().getConnectionName());
         // .<itemObject.name>
@@ -72,14 +121,53 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
             stringBuilder.append(",").append(opcUaItem.getQuantity());
         }
         return stringBuilder.toString();
+
     }
 
     @Override
-    public List<OpcUaItem> getOpcUaItemListByGroupId(Long opcUaGroupId) {
-        OpcUaItem opcUaItem = new OpcUaItem();
-        opcUaItem.setIsDeleted(false);
-        opcUaItem.setOpcUaGroupId(opcUaGroupId);
-        return opcUaItemMapper.select(opcUaItem);
+    public List<OpcUaDataValue> getBufferByOpcUaItemId(Long opcUaItemId) {
+        for (OpcUaServer opcUaServer : OpcUaTask.activeOpcUaServerList) {
+            for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
+                for (OpcUaGroup opcUaGroup : opcUaConnection.getOpcUaGroupList()) {
+                    for (OpcUaItem opcUaItem : opcUaGroup.getOpcUaItemList()) {
+                        if (opcUaItem.getId().equals(opcUaItemId)) {
+                            return opcUaItem.getOpcUaDataValueList();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public OpcUaDataValue getOpcUaDataValueByOpcUaItemId(Long opcUaItemId) {
+        for (OpcUaServer opcUaServer : OpcUaTask.activeOpcUaServerList) {
+            for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
+                for (OpcUaGroup opcUaGroup : opcUaConnection.getOpcUaGroupList()) {
+                    for (OpcUaItem opcUaItem : opcUaGroup.getOpcUaItemList()) {
+                        if (opcUaItem.getId().equals(opcUaItemId)) {
+                            return opcUaItem.getOpcUaDataValue();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<OpcUaItem> getOpcUaItemListOnlineByGroupId(Long opcUaGroupId) {
+        for (OpcUaServer opcUaServer : OpcUaTask.activeOpcUaServerList) {
+            for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
+                for (OpcUaGroup opcUaGroup : opcUaConnection.getOpcUaGroupList()) {
+                    if (opcUaGroup.getId().equals(opcUaGroupId)) {
+                        return opcUaGroup.getOpcUaItemList();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
 

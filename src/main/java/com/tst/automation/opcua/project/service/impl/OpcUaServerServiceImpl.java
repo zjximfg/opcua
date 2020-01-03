@@ -45,16 +45,6 @@ public class OpcUaServerServiceImpl implements OpcUaServerService {
         return list;
     }
 
-//    @Override
-//    public List<String> getAllSecurityPolicyUriList() {
-//        List<String> securityPolicyUri = new ArrayList<>();
-//        SecurityPolicy[] values = SecurityPolicy.values();
-//        for (SecurityPolicy value : values) {
-//            securityPolicyUri.add(value.getSecurityPolicyUri());
-//        }
-//        return securityPolicyUri;
-//    }
-
     @Override
     public List<OpcUaServer> browseOpcUaServerListByProtocolId(Long opcUaProtocolId) {
 

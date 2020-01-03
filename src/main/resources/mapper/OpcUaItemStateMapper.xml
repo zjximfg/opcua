@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tst.automation.opcua.project.mapper.OpcUaItemStateMapper">
+    <select id="existTable" parameterType="String" resultType="Integer">
+        select count(*)
+        from information_schema.TABLES
+        where LCASE(table_name)=#{tableName}
+    </select>
+    <update id="createNewTable" parameterType="String">
+        CREATE TABLE ${tableName} (
+          id VARCHAR(255) NOT NULL,
+          item_id bigint(20) NOT NULL,
+          item_value VARCHAR(32) NOT NULL,
+          record_time TIMESTAMP NOT NULL CURRENT_TIMESTAMP,
+          PRIMARY KEY (id))
+    </update>
+</mapper>

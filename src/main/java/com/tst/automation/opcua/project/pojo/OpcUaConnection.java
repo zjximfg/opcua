@@ -9,6 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.util.List;
 
 @Data
 @Entity
@@ -34,4 +35,9 @@ public class OpcUaConnection {
     @Transient
     @JsonIgnore
     private OpcUaServer opcUaServer;
+
+    @Transient
+    @JsonIgnore
+    private List<OpcUaGroup> opcUaGroupList;
+
 }

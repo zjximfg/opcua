@@ -13,7 +13,10 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/tst_opc_ua?useUnicode=true&characterEncoding=UTF-8
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
-
+#  jpa:
+#    hibernate:
+#      ddl-auto: update
+#    show-sql: true
 
 
 opc:
@@ -39,3 +42,15 @@ opc:
       ipAddress: 127.0.0.1
       clientAlias: client-alias
       password: 123456
+
+
+
+
+mybatis:
+  type-aliases-package: com.tst.automation.opcua.project.pojo
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+#mapper:
+#  mappers: com.tst.automation.opcua.project.mapper.MyExtendMapper
+#  identity: mysql

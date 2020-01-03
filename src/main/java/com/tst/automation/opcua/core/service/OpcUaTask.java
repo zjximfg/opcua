@@ -2,8 +2,8 @@ package com.tst.automation.opcua.core.service;
 
 import com.tst.automation.opcua.core.certificate.CertificateLoader;
 import com.tst.automation.opcua.core.config.OpcUaConfig;
-import com.tst.automation.opcua.project.pojo.OpcUaServer;
-import com.tst.automation.opcua.project.service.OpcUaServerService;
+import com.tst.automation.opcua.project.pojo.*;
+import com.tst.automation.opcua.project.service.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -15,7 +15,6 @@ import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription;
 import org.eclipse.milo.opcua.stack.client.UaTcpStackClient;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
-import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
@@ -35,6 +34,8 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
@@ -52,10 +53,27 @@ public class OpcUaTask implements Runnable {
     private OpcUaServerService opcUaServerService;
     @Autowired
     private CertificateLoader certificateLoader;
+    @Autowired
+    private OpcUaConnectionService opcUaConnectionService;
+    @Autowired
+    private OpcUaGroupService opcUaGroupService;
+    @Autowired
+    private OpcUaItemService opcUaItemService;
+    @Autowired
+    private OpcUaNamespaceService opcUaNamespaceService;
+    @Autowired
+    private OpcUaDataValueService opcUaDataValueService;
+    @Autowired
+    private OpcUaReadService opcUaReadService;
+    @Autowired
+    private OpcUaReadBufferService opcUaReadBufferService;
+    @Autowired
+    private OpcUaDataPersistence opcUaDataPersistence;
+    @Autowired
+    private StoragePeriodService storagePeriodService;
 
     // 激活的服务器列表
-    private List<OpcUaServer> activeOpcUaServerList;
-
+    public static List<OpcUaServer> activeOpcUaServerList;
 
     /**
      * 在新的线程中运行opc核心任务
@@ -65,26 +83,62 @@ public class OpcUaTask implements Runnable {
         try {
             // 初始化opc 任务
             this.initialization();
+
+            if (activeOpcUaServerList == null || activeOpcUaServerList.size() <= 0) return;
+            // 封装子对象
+            this.assembleOpcUaServerList(activeOpcUaServerList);
+            // 读取
+            ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(10);
+
+            // 读取实时数据
+            scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaReadService, 0, 1000, TimeUnit.MILLISECONDS);
+            // 曲线 buffer
+            scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaReadBufferService, 0, 1000, TimeUnit.MILLISECONDS);
+            // 入库
             for (OpcUaServer opcUaServer : activeOpcUaServerList) {
-                this.browseNode(opcUaServer.getOpcUaClient(), 0,"0", "Numeric");
+                for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
+                    for (OpcUaGroup opcUaGroup : opcUaConnection.getOpcUaGroupList()) {
+                        StoragePeriod storagePeriod = storagePeriodService.getStoragePeriodById(opcUaGroup.getStoragePeriodId());
+                        opcUaDataPersistence.setGroupId(opcUaGroup.getId());
+                        scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaDataPersistence, 2000, storagePeriod.getPeriod(), TimeUnit.MILLISECONDS);
+                    }
+                }
             }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
 
+    private void assembleOpcUaServerList(List<OpcUaServer> opcUaServerList) {
+        for (OpcUaServer opcUaServer : opcUaServerList) {
+            // 获取所有的连接
+            List<OpcUaConnection> opcUaConnectionList = opcUaConnectionService.getOpcUaConnectionList(opcUaServer.getId());
+            for (OpcUaConnection opcUaConnection : opcUaConnectionList) {
+                // 获取所有的组
+                List<OpcUaGroup> opcUaGroupList = opcUaGroupService.getOpcUaGroupByConnectionId(opcUaConnection.getId());
+                for (OpcUaGroup opcUaGroup : opcUaGroupList) {
+                    List<OpcUaItem> opcUaItemList = opcUaItemService.getOpcUaItemListByGroupId(opcUaGroup.getId());
+                    opcUaGroup.setOpcUaItemList(opcUaItemList);
+                }
+                opcUaConnection.setOpcUaGroupList(opcUaGroupList);
+            }
+            opcUaServer.setOpcUaConnectionList(opcUaConnectionList);
+        }
+    }
+
+
     public void initialization() throws Exception {
         // 1. 查找数据库中所有的已经存在并激活的服务器列表
-        //this.activeOpcUaServerList = opcUaServerService.getAllActiveOpcUaServer();
+        activeOpcUaServerList = opcUaServerService.getAllActiveOpcUaServer();
         // TEST
-        // System.out.println(opcUaServerService.getAllSecurityPolicyUriList());
-        this.activeOpcUaServerList = this.testServer();
+//        this.activeOpcUaServerList = this.testServer();
         // 2. 建立安全证书
         // 2.1 获取文件
         this.createCertificate();
         // 3. 通过opcUaServer获得终端
-        for (OpcUaServer opcUaServer : this.activeOpcUaServerList) {
+        for (OpcUaServer opcUaServer : activeOpcUaServerList) {
             opcUaServer.setEndpointDescription(this.getActiveEndpointDescriptionByOpcUaServer(opcUaServer));
             // log日志
             log.info(opcUaServer.getEndpointDescription().toString());
@@ -121,7 +175,6 @@ public class OpcUaTask implements Runnable {
                 nodes = client.getAddressSpace().browse(new NodeId(Unsigned.ushort(0), uint(identifier))).get();
             }
             if (nodeIdType.equals("String")) {
-                System.out.println(namespaceIndex);
                 nodes = client.getAddressSpace().browse(new NodeId(namespaceIndex, identifier)).get();
             }
         }
@@ -145,18 +198,18 @@ public class OpcUaTask implements Runnable {
     /**
      * 通过 当前激活的 服务器获取对应的endpoint
      *
-     * @param activeOpcUaServer 当前激活的服务器
+     * @param opcUaServer 当前激活的服务器
      * @return 第一个满足条件的对应的endpoint (包括协议，包括加密模式，包括电脑ip)
      */
-    public EndpointDescription getActiveEndpointDescriptionByOpcUaServer(OpcUaServer activeOpcUaServer) throws Exception {
+    public EndpointDescription getActiveEndpointDescriptionByOpcUaServer(OpcUaServer opcUaServer) throws Exception {
 
         // 获取全部加密模式的endpoint
-        EndpointDescription[] endpointDescriptions = this.getEndpointDescriptions(activeOpcUaServer.getEndpointUrl());
+        EndpointDescription[] endpointDescriptions = this.getEndpointDescriptions(opcUaServer.getEndpointUrl());
         // 过滤掉对应的加密模式
         Stream<EndpointDescription> stream = Arrays.stream(endpointDescriptions);
         return stream.filter(endpointDescription -> {
-            return endpointDescription.getSecurityPolicyUri().equals(activeOpcUaServer.getSecurityPolicyUri());
-        }).findFirst().orElseThrow(() -> new Exception("该服务器" + activeOpcUaServer.getEndpointUrl() + "/" + activeOpcUaServer.getSecurityPolicyUri() + "没有找到对应的Endpoint"));
+            return endpointDescription.getSecurityPolicyUri().equals(opcUaServer.getSecurityPolicyUri());
+        }).findFirst().orElseThrow(() -> new Exception("该服务器" + opcUaServer.getEndpointUrl() + "/" + opcUaServer.getSecurityPolicyUri() + "没有找到对应的Endpoint"));
     }
 
 
@@ -193,14 +246,11 @@ public class OpcUaTask implements Runnable {
      * @throws InterruptedException
      */
     public DataValue readValue(OpcUaClient client, NodeId nodeId) throws ExecutionException, InterruptedException {
-        //        //创建连接
+        //创建连接
         client.connect().get();
 
         DataValue value = client.readValue(0.0, TimestampsToReturn.Both, nodeId).get();
 
-//        authenticationTypes:
-//        Auth
-        System.out.println(value.getValue().getValue());
         return value;
     }
 
@@ -256,19 +306,5 @@ public class OpcUaTask implements Runnable {
                 }
         ).get();
     }
-
-
-    public List<OpcUaServer> testServer() {
-        String endpointUrl = opcUaConfig.getEndpointBaseUrl() + "localhost:" + opcUaProtocolService.getOpcUaProtocolById(1L).getPort();
-        OpcUaServer opcUaServer = new OpcUaServer();
-        opcUaServer.setIsActive(true);
-        opcUaServer.setEndpointUrl(endpointUrl);
-        opcUaServer.setSecurityPolicyUri(SecurityPolicy.Basic128Rsa15.getSecurityPolicyUri());
-        List<OpcUaServer> list = new ArrayList<>();
-        list.add(opcUaServer);
-        return list;
-    }
-
-
 
 }

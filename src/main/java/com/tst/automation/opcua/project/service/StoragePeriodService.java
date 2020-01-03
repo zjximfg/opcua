@@ -9,4 +9,6 @@ import java.util.List;
 public interface StoragePeriodService {
 
     List<StoragePeriod> getAllStoragePeriodList();
+
+    StoragePeriod getStoragePeriodById(Long storagePeriodId);
 }

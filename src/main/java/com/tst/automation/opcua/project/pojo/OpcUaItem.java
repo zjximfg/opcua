@@ -7,6 +7,7 @@ import tk.mybatis.mapper.annotation.KeySql;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.util.List;
 
 @Data
 @Table(name = "tbl_opc_ua_item")
@@ -17,6 +18,8 @@ public class OpcUaItem {
     private Long id;
 
     private Long itemCategoryId;        // 类别，S7Basic， S7Timer， S7Counter
+
+    private String identifier;
 
     private String fullName;            // <opcUaConnection.opcUaNamespace.namespaceUri><opcUaConnection.name>.<itemObject.name>{dbNumber}.<address>,<itemType.name>{bitAddress/stringLength}{,quantity}
 
@@ -67,4 +70,16 @@ public class OpcUaItem {
 
     @Transient
     private String currentValue;
+
+    @Transient
+    private String quality;
+
+    @Transient
+    @JsonIgnore
+    private OpcUaDataValue opcUaDataValue;
+
+    @Transient
+    @JsonIgnore
+    private List<OpcUaDataValue> opcUaDataValueList;
+
 }

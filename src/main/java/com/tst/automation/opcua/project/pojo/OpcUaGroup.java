@@ -7,6 +7,7 @@ import tk.mybatis.mapper.annotation.KeySql;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.util.List;
 
 @Data
 @Table(name = "tbl_opc_ua_group")
@@ -31,4 +32,8 @@ public class OpcUaGroup {
     @Transient
     @JsonIgnore
     private OpcUaConnection opcUaConnection;
+
+    @Transient
+    @JsonIgnore
+    private List<OpcUaItem> opcUaItemList;
 }

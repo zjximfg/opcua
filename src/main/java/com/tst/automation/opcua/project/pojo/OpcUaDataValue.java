@@ -26,7 +26,7 @@ public class OpcUaDataValue {
         this.value = dataValue.getValue().getValue().toString();
 
         NodeId typeNodeId = dataValue.getValue().getDataType().get();
-        System.out.println("typeNodeId: " + typeNodeId.toParseableString());
+        // System.out.println("typeNodeId: " + typeNodeId.toParseableString());
         // TODO
         // dateType = ????
         this.serverDateTime = dataValue.getServerTime().getJavaDate();

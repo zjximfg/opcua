@@ -1,6 +1,5 @@
 package com.tst.automation.opcua.project.pojo;
 
-import com.tst.automation.opcua.core.pojo.OpcUaNamespace;
 import com.tst.automation.opcua.core.pojo.OpcUaProtocol;
 import lombok.Data;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
@@ -10,6 +9,7 @@ import tk.mybatis.mapper.annotation.KeySql;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.util.List;
 
 @Data
 @Table(name = "tbl_opc_ua_server")
@@ -46,7 +46,8 @@ public class OpcUaServer {
     private OpcUaClient opcUaClient;
     @Transient
     private EndpointDescription endpointDescription;
-    //TODO 后期放入connection中
+    @Transient
+    private List<OpcUaConnection> opcUaConnectionList;
 
 
 

@@ -19,4 +19,9 @@ public class StoragePeriodServiceImpl implements StoragePeriodService {
 
         return storagePeriodMapper.selectAll();
     }
+
+    @Override
+    public StoragePeriod getStoragePeriodById(Long storagePeriodId) {
+        return storagePeriodMapper.selectByPrimaryKey(storagePeriodId);
+    }
 }
