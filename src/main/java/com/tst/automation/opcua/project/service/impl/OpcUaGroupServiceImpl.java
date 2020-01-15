@@ -41,4 +41,11 @@ public class OpcUaGroupServiceImpl implements OpcUaGroupService {
         opcUaGroup.setIsDeleted(false);
         opcUaGroupMapper.insertSelective(opcUaGroup);
     }
+
+    @Override
+    public List<OpcUaGroup> getAllOpcUaGroup() {
+        OpcUaGroup opcUaGroup = new OpcUaGroup();
+        opcUaGroup.setIsDeleted(false);
+        return opcUaGroupMapper.select(opcUaGroup);
+    }
 }

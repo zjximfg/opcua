@@ -26,6 +26,7 @@ import org.eclipse.milo.opcua.sdk.client.api.nodes.Node;
 import org.eclipse.milo.opcua.stack.core.types.structured.MonitoredItemCreateRequest;
 import org.eclipse.milo.opcua.stack.core.types.structured.MonitoringParameters;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
+import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -68,9 +69,15 @@ public class OpcUaTask implements Runnable {
     @Autowired
     private OpcUaReadBufferService opcUaReadBufferService;
     @Autowired
-    private OpcUaDataPersistence opcUaDataPersistence;
+    private ObjectFactory<OpcUaDataPersistence> opcUaDataPersistenceObjectFactory;
     @Autowired
     private StoragePeriodService storagePeriodService;
+    @Autowired
+    private AlarmService alarmService;
+    @Autowired
+    private AlarmReadService alarmReadService;
+    @Autowired
+    private ObjectFactory<AlarmDataPersistence> alarmDataPersistenceObjectFactory;
 
     // 激活的服务器列表
     public static List<OpcUaServer> activeOpcUaServerList;
@@ -88,20 +95,33 @@ public class OpcUaTask implements Runnable {
             // 封装子对象
             this.assembleOpcUaServerList(activeOpcUaServerList);
             // 读取
-            ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(10);
+            ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(100);
 
             // 读取实时数据
             scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaReadService, 0, 1000, TimeUnit.MILLISECONDS);
             // 曲线 buffer
             scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaReadBufferService, 0, 1000, TimeUnit.MILLISECONDS);
-            // 入库
+
+            scheduledThreadPoolExecutor.scheduleAtFixedRate(alarmReadService, 0, 200, TimeUnit.MILLISECONDS);
+            // 变量服务入库
             for (OpcUaServer opcUaServer : activeOpcUaServerList) {
                 for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
                     for (OpcUaGroup opcUaGroup : opcUaConnection.getOpcUaGroupList()) {
                         StoragePeriod storagePeriod = storagePeriodService.getStoragePeriodById(opcUaGroup.getStoragePeriodId());
+                        // 多例时 采用 objectFactory
+                        OpcUaDataPersistence opcUaDataPersistence = opcUaDataPersistenceObjectFactory.getObject();
                         opcUaDataPersistence.setGroupId(opcUaGroup.getId());
                         scheduledThreadPoolExecutor.scheduleAtFixedRate(opcUaDataPersistence, 2000, storagePeriod.getPeriod(), TimeUnit.MILLISECONDS);
                     }
+                }
+            }
+            // 报警入库
+            for (OpcUaServer opcUaServer : activeOpcUaServerList) {
+                for (OpcUaConnection opcUaConnection : opcUaServer.getOpcUaConnectionList()) {
+                    // 多例时 采用 objectFactory
+                    AlarmDataPersistence alarmDataPersistence = alarmDataPersistenceObjectFactory.getObject();
+                    alarmDataPersistence.setOpcUaConnectionId(opcUaConnection.getId());
+                    scheduledThreadPoolExecutor.scheduleAtFixedRate(alarmDataPersistence, 2000, 200, TimeUnit.MILLISECONDS);
                 }
             }
 
@@ -123,6 +143,9 @@ public class OpcUaTask implements Runnable {
                     opcUaGroup.setOpcUaItemList(opcUaItemList);
                 }
                 opcUaConnection.setOpcUaGroupList(opcUaGroupList);
+                // 获取所有的AlarmList
+                List<Alarm> alarmList = alarmService.getAlarmListByOpcUaConnectionId(opcUaConnection.getId());
+                opcUaConnection.setAlarmList(alarmList);
             }
             opcUaServer.setOpcUaConnectionList(opcUaConnectionList);
         }

@@ -9,6 +9,8 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -62,9 +64,9 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
     @Override
     public void updateOpcUaItem(OpcUaItem opcUaItem) {
         String identifier = this.createIdentifier(opcUaItem);
+        opcUaItem.setIdentifier(identifier);
         String fullName = this.createFullName(opcUaItem);
         System.out.println(fullName);
-        opcUaItem.setIdentifier(identifier);
         opcUaItem.setFullName(fullName);
         opcUaItemMapper.updateByPrimaryKeySelective(opcUaItem);
     }
@@ -72,9 +74,9 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
     @Override
     public void createOpcUaItem(OpcUaItem opcUaItem) {
         String identifier = this.createIdentifier(opcUaItem);
+        opcUaItem.setIdentifier(identifier);
         String fullName = this.createFullName(opcUaItem);
         System.out.println(fullName);
-        opcUaItem.setIdentifier(identifier);
         opcUaItem.setFullName(fullName);
         opcUaItem.setIsDeleted(false);
         opcUaItemMapper.insertSelective(opcUaItem);
@@ -168,6 +170,28 @@ public class OpcUaItemServiceImpl implements OpcUaItemService {
             }
         }
         return null;
+    }
+
+    @Override
+    public List<ItemCurve> getItemCurveData(Long itemId) {
+        List<OpcUaDataValue> opcUaDataValueList = this.getBufferByOpcUaItemId(itemId);
+        List<ItemCurve> itemCurveList = new ArrayList<>();
+        long i = 0;
+        for (OpcUaDataValue opcUaDataValue : opcUaDataValueList) {
+            ItemCurve itemCurve = new ItemCurve();
+            itemCurve.setId(i);
+            i++;
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
+            itemCurve.setTime(simpleDateFormat.format(opcUaDataValue.getServerDateTime().getTime()));
+            itemCurve.setValue(opcUaDataValue.getValue());
+            itemCurveList.add(itemCurve);
+        }
+        return itemCurveList;
+    }
+
+    @Override
+    public OpcUaItem getOpcUaItemById(Long opcUaItemId) {
+        return opcUaItemMapper.selectByPrimaryKey(opcUaItemId);
     }
 
 

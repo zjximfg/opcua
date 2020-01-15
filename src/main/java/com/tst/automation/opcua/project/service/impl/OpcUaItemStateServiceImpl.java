@@ -15,7 +15,7 @@ public class OpcUaItemStateServiceImpl implements OpcUaItemStateService {
     @Autowired
     private OpcUaItemStateMapper opcUaItemStateMapper;
 
-    private final static String BASE_TABLE_NAME = "tbl_opc_ua_item_state_";
+    public final static String BASE_TABLE_NAME = "tbl_opc_ua_item_state_";
 
     @Override
     public void createNewTable(Long id) {

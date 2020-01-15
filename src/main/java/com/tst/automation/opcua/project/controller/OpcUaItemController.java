@@ -77,4 +77,10 @@ public class OpcUaItemController {
         List<OpcUaItem> opcUaItemList = opcUaItemService.getOpcUaItemListOnlineByGroupId(opcUaGroupId);
         return ResponseEntity.ok(opcUaItemList);
     }
+
+    @GetMapping("itemCurve/data")
+    public ResponseEntity<List<ItemCurve>> getItemCurveData(@RequestParam("itemId") Long itemId) {
+        List<ItemCurve> itemCurveData = opcUaItemService.getItemCurveData(itemId);
+        return ResponseEntity.ok(itemCurveData);
+    }
 }

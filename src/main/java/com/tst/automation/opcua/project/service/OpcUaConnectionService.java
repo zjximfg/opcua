@@ -20,4 +20,6 @@ public interface OpcUaConnectionService {
     void createOpcUaConnection(OpcUaConnection opcUaConnection);
 
     OpcUaConnection getOpcUaConnectionById(Long id);
+
+    List<OpcUaConnection> getAllOpcUaConnection();
 }

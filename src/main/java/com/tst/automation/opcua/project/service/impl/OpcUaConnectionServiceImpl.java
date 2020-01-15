@@ -56,4 +56,11 @@ public class OpcUaConnectionServiceImpl implements OpcUaConnectionService {
     public OpcUaConnection getOpcUaConnectionById(Long id) {
         return opcUaConnectionMapper.selectByPrimaryKey(id);
     }
+
+    @Override
+    public List<OpcUaConnection> getAllOpcUaConnection() {
+        OpcUaConnection opcUaConnection = new OpcUaConnection();
+        opcUaConnection.setIsDeleted(false);
+        return opcUaConnectionMapper.select(opcUaConnection);
+    }
 }

@@ -7,10 +7,12 @@ import com.tst.automation.opcua.project.pojo.OpcUaServer;
 import com.tst.automation.opcua.project.service.OpcUaItemStateService;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 @Service
 @Data
+@Scope("prototype")
 public class OpcUaDataPersistence implements Runnable {
 
     @Autowired

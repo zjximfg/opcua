@@ -40,4 +40,8 @@ public class OpcUaConnection {
     @JsonIgnore
     private List<OpcUaGroup> opcUaGroupList;
 
+    @Transient
+    @JsonIgnore
+    private List<Alarm> alarmList;
+
 }

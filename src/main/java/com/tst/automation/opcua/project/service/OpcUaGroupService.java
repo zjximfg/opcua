@@ -16,4 +16,5 @@ public interface OpcUaGroupService {
 
     void createOpcUaGroup(OpcUaGroup opcUaGroup);
 
+    List<OpcUaGroup> getAllOpcUaGroup();
 }
