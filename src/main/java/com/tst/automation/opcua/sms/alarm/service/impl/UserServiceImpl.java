@@ -29,13 +29,13 @@ public class UserServiceImpl implements UserService {
             condition.createCriteria().andEqualTo("roleId", roleId);
         }
         if (StringUtils.isNotBlank(name)) {
-            condition.createCriteria().andEqualTo("name", name);
+            condition.and().andLike("name", "%" + name + "%");
         }
         if (StringUtils.isNotBlank(telephone)) {
-            condition.createCriteria().andLike("telephone", "% " + telephone + " %");
+            condition.and().andLike("telephone", "%" + telephone + "%");
         }
         if (StringUtils.isNotBlank(description)) {
-            condition.createCriteria().andLike("description", "% " + description + " %");
+            condition.and().andLike("description", "%" + description + "%");
         }
         Page<User> page = (Page<User>)userMapper.selectByExample(condition);
         return new PageResponse<>(page.getTotal(), page.getResult());
